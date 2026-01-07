@@ -23,7 +23,11 @@ dependencies {
   intellijPlatform {
     intellijIdea("2025.1.5.1")
   }
+
+  // https://mvnrepository.com/artifact/org.json/json
+  implementation("org.json:json:20251224")
 }
+
 
 intellijPlatform {
   buildSearchableOptions = false
