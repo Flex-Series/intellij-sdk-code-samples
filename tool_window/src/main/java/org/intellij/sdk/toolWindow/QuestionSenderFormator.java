@@ -6,7 +6,7 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 
 public class QuestionSenderFormator {
-    private PostClass postClass;
+    private final PostClass postClass;
     public QuestionSenderFormator(PostClass postClass) {
         this.postClass = postClass;
     }

@@ -16,6 +16,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class PostClass {
+    private User user;
+
     public String post(String request) {
         HttpURLConnection conn = null;
         DataOutputStream os = null;
@@ -24,7 +26,9 @@ public class PostClass {
             Gson gson = new Gson();
             Map<String, String> payload = new HashMap<>();
             payload.put("q", request);
+            payload.put("userid", String.valueOf(user.getId()));
             String inputData = gson.toJson(payload);
+            System.out.println(inputData);
             byte[] postData = inputData.getBytes(StandardCharsets.UTF_8);
             conn = (HttpURLConnection) url.openConnection();
             conn.setDoOutput(true);
@@ -106,6 +110,9 @@ public class PostClass {
                 //System.out.println(response);
                 JSONObject obj = new JSONObject(response);
                 String answer = obj.getString("valid");
+                if(answer.equals("true")){
+                    user = new User(obj.getString("username"),obj.getInt("id"));
+                }
                 System.out.println(answer);
                 return answer.equals("true");
 

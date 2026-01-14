@@ -21,6 +21,8 @@ import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Array;
@@ -69,25 +71,85 @@ final class CalendarToolWindowFactory implements ToolWindowFactory, DumbAware {
     }
 
     void createLoginPanel() {
-      login.setLayout(new GridLayout(4,1,-10,4));
+      //login.setLayout(new GridLayout(4,1,-10,4));
+      login.setLayout(new BoxLayout(login, BoxLayout.Y_AXIS));
       JLabel loginstat = new JLabel(" ");
-      JLabel usernameLabel = new JLabel("Username:");
-      JLabel passwordLabel = new JLabel("Password:");
+      //JLabel usernameLabel = new JLabel("Username:");
+      //JLabel passwordLabel = new JLabel("Password:");
       JTextField username = new JTextField();
+      username.setText("Username");
+      username.setForeground(Color.GRAY);
+      username.addFocusListener(new FocusAdapter() {
+        @Override
+        public void focusGained(FocusEvent e) {
+          if (username.getText().equals("Username")) {
+            username.setText("");
+            username.setForeground(Color.WHITE);
+          }
+        }
+
+        @Override
+        public void focusLost(FocusEvent e) {
+          if (username.getText().isEmpty()) {
+            username.setText("Username");
+            username.setForeground(Color.GRAY);
+          }
+        }
+      });
       JPasswordField password = new JPasswordField();
-      username.setMaximumSize(new Dimension(200, 20));
-      password.setMaximumSize(new Dimension(200, 20));
-      username.setPreferredSize(new Dimension(200, 20));
-      password.setPreferredSize(new Dimension(200, 20));
-      username.setMinimumSize(new Dimension(200, 20));
-      password.setMinimumSize(new Dimension(200, 20));
-      login.add(usernameLabel);
+      password.setEchoChar((char) 0);
+      password.setText("Password");
+      password.setForeground(Color.GRAY);
+      password.addFocusListener(new FocusAdapter() {
+        @Override
+        public void focusGained(FocusEvent e) {
+          if (String.valueOf(password.getPassword()).equals("Password")) {
+            password.setText("");
+            password.setForeground(Color.WHITE);
+            password.setEchoChar('•');
+          }
+        }
+
+        @Override
+        public void focusLost(FocusEvent e) {
+          if (String.valueOf(password.getPassword()).isEmpty()) {
+            password.setText("Password");
+            password.setForeground(Color.GRAY);
+            password.setEchoChar((char) 0);
+          }
+        }
+      });
+
+      Dimension size = new Dimension(200, 35);
+      username.setMaximumSize(size);
+      password.setMaximumSize(size);
+      username.setPreferredSize(size);
+      password.setPreferredSize(size);
+      username.setMinimumSize(size);
+      password.setMinimumSize(size);
+      //login.add(usernameLabel);
+
       login.add(username);
-      login.add(passwordLabel);
+      //login.add(passwordLabel);
       login.add(password);
       login.add(new JLabel(" "));
       JButton loginButton = new JButton("Login");
+      System.out.println(loginButton.getHeight());
+
       loginButton.putClientProperty("JButton.buttonType", "default");
+      username.setAlignmentX( Component.LEFT_ALIGNMENT );//0.0
+      password.setAlignmentX( Component.LEFT_ALIGNMENT );//0.0
+      loginButton.setAlignmentX( Component.LEFT_ALIGNMENT );//0.0
+      loginstat.setAlignmentX( Component.LEFT_ALIGNMENT );
+
+      loginButton.setMaximumSize(size);
+      loginButton.setPreferredSize(size);
+      loginButton.setMinimumSize(size);
+
+      loginstat.setMaximumSize(size);
+      loginstat.setPreferredSize(size);
+      loginstat.setMinimumSize(size);
+
       //loginButton.set(new Color(78, 139, 202));
       login.add(loginButton);
       login.add(loginstat);
@@ -135,6 +197,9 @@ final class CalendarToolWindowFactory implements ToolWindowFactory, DumbAware {
       find.addActionListener(e -> {
         new Thread(new Runnable() {
           public void run() {
+            try{
+              EventQueue.invokeAndWait(new Runnable(){
+                public void run() {
             HashMap<File, JCheckBox> fileJCheckBoxHashMap = new HashMap<File, JCheckBox>();
             LinkedHashSet<File> fileSet = new LinkedHashSet<>();
 
@@ -143,38 +208,39 @@ final class CalendarToolWindowFactory implements ToolWindowFactory, DumbAware {
 
             Project project = ProjectManager.getInstance().getOpenProjects()[0];
             String lastmodule = ModuleManager.getInstance(project).getModules()[ModuleManager.getInstance(project).getModules().length - 1].getName();
-            for (Module module : ModuleManager.getInstance(project).getModules()) {
-              System.out.println(module);
-              for (VirtualFile root :
-                      ModuleRootManager.getInstance(module).getSourceRoots()) {
-                VfsUtilCore.iterateChildrenRecursively(root, null, file -> {
-                  String s = file.getPath().replaceFirst(".*?"+lastmodule+"\\s*", "");
-                  File temp = new File(file.getPath());
-                  if(!s.isEmpty() && !temp.isDirectory() && !fileJCheckBoxHashMap.containsKey(temp)) {
-                    System.out.println(lastmodule);
-                    System.out.println(s);
-                    JPanel panel = new JPanel();
-                    panel.setLayout(new BorderLayout());
-                    JCheckBox tempCheckBox = new JCheckBox(s);
-                    panel.add(tempCheckBox, BorderLayout.WEST);
-                    trial.add(panel);
-                    fileJCheckBoxHashMap.put(temp, tempCheckBox);
+
+                for (Module module : ModuleManager.getInstance(project).getModules()) {
+                  System.out.println(module);
+                  for (VirtualFile root :
+                          ModuleRootManager.getInstance(module).getSourceRoots()) {
+                    VfsUtilCore.iterateChildrenRecursively(root, null, file -> {
+                      String s = file.getPath().replaceFirst(".*?"+lastmodule+"\\s*", "");
+                      File temp = new File(file.getPath());
+                      if(!s.isEmpty() && !temp.isDirectory() && !fileJCheckBoxHashMap.containsKey(temp)) {
+                        System.out.println(lastmodule);
+                        System.out.println(s);
+                        JPanel panel = new JPanel();
+                        panel.setLayout(new BorderLayout());
+                        JCheckBox tempCheckBox = new JCheckBox(s);
+                        panel.add(tempCheckBox, BorderLayout.WEST);
+                        trial.add(panel);
+                        fileJCheckBoxHashMap.put(temp, tempCheckBox);
+                      }
+                      return true;
+                    });
                   }
-                  return true;
-                });
-              }
-            }
-            JBScrollPane listScroller = new JBScrollPane(trial);
-            listScroller.setPreferredSize(new Dimension(toolWindow.getComponent().getWidth() -20, 300));
-            JPanel panel = new JPanel(new BorderLayout());
-            panel.add(listScroller, BorderLayout.CENTER);
-            panel.setPreferredSize(new Dimension(toolWindow.getComponent().getWidth() -20, 300));
-            home.add(panel, BorderLayout.CENTER);
-            JButton questions = new JButton("Generate Questions");
-            questions.setMaximumSize(new Dimension(30, 20));
-            questions.putClientProperty("JButton.buttonType", "default");
-            ArrayList<File> filesforq = new ArrayList<>();
-            questions.addActionListener(e -> {
+                }
+                JBScrollPane listScroller = new JBScrollPane(trial);
+                listScroller.setPreferredSize(new Dimension(toolWindow.getComponent().getWidth() -20, 300));
+                JPanel panel = new JPanel(new BorderLayout());
+                panel.add(listScroller, BorderLayout.CENTER);
+                panel.setPreferredSize(new Dimension(toolWindow.getComponent().getWidth() -20, 300));
+                home.add(panel, BorderLayout.CENTER);
+                JButton questions = new JButton("Generate Questions");
+                questions.setMaximumSize(new Dimension(30, 20));
+                questions.putClientProperty("JButton.buttonType", "default");
+                ArrayList<File> filesforq = new ArrayList<>();
+                questions.addActionListener(e -> {
                   for (HashMap.Entry<File, JCheckBox> entry : fileJCheckBoxHashMap.entrySet()) {
                     if(entry.getValue().isSelected()){
                       filesforq.add(entry.getKey());
@@ -182,13 +248,18 @@ final class CalendarToolWindowFactory implements ToolWindowFactory, DumbAware {
                   }
                   if(!filesforq.isEmpty()){
                     System.out.println(filesforq);
-                    home.setVisible(false);
-                    questions.setVisible(true);
+                    //home.setVisible(false);
+                    //questions.setVisible(true);
                     QuestionSenderFormator questionSenderFormator = new QuestionSenderFormator(postClass);
-                    questionSenderFormator.send(filesforq, "Generate Multiple Choice Questions in json format based on these code files");
+                    questionSenderFormator.send(filesforq, "Generate Multiple Choice Questions in json format based on these code files, your response MUST be ONLY in json format");
                   }
+                });
+                home.add(questions, BorderLayout.SOUTH);
+              };
             });
-            home.add(questions, BorderLayout.SOUTH);
+
+          } catch (Exception e) {
+            e.printStackTrace();}
           }
         }).start();
 
