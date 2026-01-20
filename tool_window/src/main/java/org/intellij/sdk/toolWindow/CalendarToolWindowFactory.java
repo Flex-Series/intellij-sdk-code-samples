@@ -13,7 +13,6 @@ import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.openapi.wm.ToolWindowFactory;
 import com.intellij.ui.JBColor;
 
-import com.intellij.ui.components.JBList;
 import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.content.Content;
 import com.intellij.ui.content.ContentFactory;
@@ -24,11 +23,7 @@ import java.awt.*;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.io.File;
-import java.io.IOException;
-import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.*;
 
 final class CalendarToolWindowFactory implements ToolWindowFactory, DumbAware {
@@ -50,7 +45,7 @@ final class CalendarToolWindowFactory implements ToolWindowFactory, DumbAware {
     private final JPanel login = new JPanel();
     private final JPanel home = new JPanel();
     private final JPanel questions = new JPanel();
-
+    private final ToolWindow toolWindow;
 
     private final JTextArea info = new JTextArea();
 
@@ -63,11 +58,14 @@ final class CalendarToolWindowFactory implements ToolWindowFactory, DumbAware {
       contentPanel.add(home);
       createQuestionsPanel();
       contentPanel.add(questions);
+      this.toolWindow = toolWindow;
     }
 
     void createQuestionsPanel() {
       questions.setLayout(new BoxLayout(questions, BoxLayout.Y_AXIS));
       questions.setVisible(false);
+
+
     }
 
     void createLoginPanel() {
@@ -251,10 +249,30 @@ final class CalendarToolWindowFactory implements ToolWindowFactory, DumbAware {
                     //home.setVisible(false);
                     //questions.setVisible(true);
                     QuestionSenderFormator questionSenderFormator = new QuestionSenderFormator(postClass);
-                    questionSenderFormator.send(filesforq, "Generate Multiple Choice Questions in json format based on these code files, your response MUST be ONLY in json format");
+                    //home.setVisible(false);
+                    new Thread(new Runnable() {
+                      @Override
+                      public void run() {
+                        home.setVisible(false);
+                        updateQuestionsPanel();
+                      }
+                    }).start();
+                    new Thread(new Runnable() {
+                      @Override
+                      public void run() {
+                          try {
+                            ArrayList<Question> questions1 = questionSenderFormator.send(filesforq, "Generate Multiple Choice Questions in json format based on these code files, your response MUST be ONLY in json format", QuestionType.MCQ);
+
+                            updateQuestions(questions1);
+                          } catch (Exception e) {
+                            e.printStackTrace();
+                          }
+                      }
+                    }).start();
                   }
                 });
                 home.add(questions, BorderLayout.SOUTH);
+
               };
             });
 
@@ -274,11 +292,139 @@ final class CalendarToolWindowFactory implements ToolWindowFactory, DumbAware {
     }
 
     private void updateQuestionsPanel() {
+      JProgressBar progressBar = new JProgressBar(0, 100);
+      questions.add(progressBar);
+      questions.setVisible(true);
+        for(int i = 0; i < 100; i++){
+          progressBar.setValue(i);
+          try {
+            Thread.sleep(100);
+          } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+          }
+        }
+        progressBar.setVisible(false);
+    }
 
+    private void updateQuestions(ArrayList<Question> questionsA) {
+      Container trial = new Container();
+      trial.setLayout(new BoxLayout(trial, BoxLayout.Y_AXIS));
+      //final String html = "<html><body style='width: %1spx'>%1s";
+      ArrayList<JPanel> panelsA = new ArrayList<>();
+      HashMap<String, ArrayList<JCheckBox>> checkboxz = new HashMap<>();
+      for (Question question : questionsA) {
+        JPanel panel = new JPanel();
+        panel.add(new JLabel(" "));
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        MultipleChoiceQuestion mcq = (MultipleChoiceQuestion) question;
+        //String.format(html, 200, mcq.getQuestion())
+        panel.add(new JLabel("<html>" + mcq.getQuestion() + "</html>"));
+        ArrayList<JCheckBox> checkBoxes = new ArrayList<>();
+
+        for (String option : mcq.getOptions()) {
+          JCheckBox checkBox = new JCheckBox(option);
+          checkBoxes.add(checkBox);
+          panel.add(checkBox);
+        }
+
+        checkboxz.put(((MultipleChoiceQuestion) question).getQuestion(), checkBoxes);
+
+        for (JCheckBox checkBox : checkBoxes) {
+          checkBox.addActionListener(e -> {
+            System.out.println("Clicked ");
+            if (checkBox.isSelected()) {
+              for (JCheckBox checkBox1 : checkBoxes) {
+                if (!checkBox1.equals(checkBox)) {
+                  checkBox1.setSelected(false);
+                }
+              }
+            }
+          });
+        }
+
+        panelsA.add(panel);
+        trial.add(panel);
+      }
+      //panel.setPreferredSize(new Dimension(400, 10000));
+      JScrollPane questionScroller = new JBScrollPane(trial);
+      questionScroller.setPreferredSize(new Dimension(toolWindow.getComponent().getWidth() -20, toolWindow.getComponent().getHeight() - 100));
+      questionScroller.setBorder(BorderFactory.createEmptyBorder());
+      questions.add(questionScroller, BorderLayout.CENTER);
+      JButton questionsSubmit = new JButton("Submit");
+      questionsSubmit.addActionListener(e -> {
+        boolean submitable = true;
+        for (HashMap.Entry<String, ArrayList<JCheckBox>> entry : checkboxz.entrySet()) {
+          String ques = entry.getKey();
+          ArrayList<JCheckBox> checkBoxes = entry.getValue();
+          int unselected = 0;
+          for (JCheckBox checkBox : checkBoxes) {
+            if (checkBox.isSelected()) {
+              break;
+            }else {
+              unselected++;
+            }
+          }
+          if (unselected == checkBoxes.size()) {
+            submitable = false;
+            break;
+          }
+        }
+        System.out.println("submitable: " + submitable);
+        if (submitable) {
+          int correct = 0;
+           for (HashMap.Entry<String, ArrayList<JCheckBox>> entry : checkboxz.entrySet()) {
+             String ques = entry.getKey();
+             ArrayList<JCheckBox> checkBoxes = entry.getValue();
+             String questionss = "";
+             String correctOption = "";
+             for (Question question : questionsA) {
+               MultipleChoiceQuestion mcq = (MultipleChoiceQuestion) question;
+               if(ques.equals(mcq.getQuestion())){
+                 questionss = mcq.getQuestion();
+                 correctOption = mcq.getAnswer();
+                 break;
+               }
+             }
+             for (JCheckBox checkBox : checkBoxes) {
+               if (checkBox.isSelected() && checkBox.getText().equals(correctOption)) {
+                 correct++;
+                 checkBox.setText(checkBox.getText() + "✔");
+             }
+               String cor = "tick";
+
+              /*
+             for (JCheckBox checkBox1 : checkBoxes) {
+               if (checkBox1.getText().equals(correctOption)) {
+                 checkBox1.setText(checkBox.getText() + "✔");
+               }else{
+                 checkBox1.setText(checkBox.getText() + "✖");
+               }
+             }*/
+             }
+           }
+
+           questionScroller.setEnabled(false);
+
+
+           JLabel label = new JLabel("Score:" + correct + " / " + questionsA.size());
+           label.setForeground(JBColor.GREEN);
+           questions.add(label, BorderLayout.AFTER_LAST_LINE);
+
+          for (HashMap.Entry<String, ArrayList<JCheckBox>> entry : checkboxz.entrySet()) {
+            ArrayList<JCheckBox> checkBoxes = entry.getValue();
+            for (JCheckBox checkBox : checkBoxes) {
+              checkBox.setEnabled(false);
+            }
+          }
+        }
+
+      });
+      questions.add(questionsSubmit, BorderLayout.SOUTH);
     }
 
     @NotNull
     private JPanel createInfoPanel(int width, int height) {
+
       JPanel panel = new JPanel();
       panel.add(info);
       info.setEditable(false);
@@ -316,10 +462,10 @@ final class CalendarToolWindowFactory implements ToolWindowFactory, DumbAware {
     private void updateText() throws InterruptedException, InvocationTargetException {
       new Thread(() -> {
         try {
-          String res = postClass.post("testing");
+          ArrayList<Question> res = postClass.post("testing", QuestionType.MCQ);
           EventQueue.invokeAndWait(new Runnable(){
             public void run() {
-              info.setText(res);
+              info.setText(String.valueOf(res));
             };
           });
         } catch(Exception e) {

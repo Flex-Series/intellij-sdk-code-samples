@@ -11,9 +11,22 @@ public class QuestionSenderFormator {
         this.postClass = postClass;
     }
 
-    public void send(ArrayList<File> files, String prompt) {
-
-        String FinalPrompt = prompt;
+    public ArrayList<Question> send(ArrayList<File> files, String prompt, QuestionType questionType) throws IOException {
+        String format = "{\n" +
+                "  \"questions\": [\n" +
+                "    {\n" +
+                "      \"question\": \"ExampleQuestion\",\n" +
+                "      \"options\": [\n" +
+                "        \"Answer1\",\n" +
+                "        \"Answer2\",\n" +
+                "        \"Answer3\",\n" +
+                "        \"Answer5\"\n" +
+                "      ],\n" +
+                "      \"correct_answer\": \"Answer2\"\n" +
+                "    }  \n" +
+                "  ]\n" +
+                "}";
+        String FinalPrompt = prompt + ", the response must be in the format of" + format;
 
         for (File file : files) {
             String content = null;
@@ -27,7 +40,7 @@ public class QuestionSenderFormator {
 
             System.out.println(content);
         }
-        postClass.post(FinalPrompt);
+        return postClass.post(FinalPrompt, QuestionType.MCQ);
 
     }
 }
