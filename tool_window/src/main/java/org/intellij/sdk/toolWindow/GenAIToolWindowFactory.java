@@ -26,7 +26,7 @@ import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 
-final class CalendarToolWindowFactory implements ToolWindowFactory, DumbAware {
+final class GenAIToolWindowFactory implements ToolWindowFactory, DumbAware {
   private APImed med;
   @Override
   public void createToolWindowContent(@NotNull Project project, @NotNull ToolWindow toolWindow) {

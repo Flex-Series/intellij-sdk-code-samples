@@ -35,7 +35,7 @@
 
   <extensions defaultExtensionNs="com.intellij">
     <toolWindow id="Question GenAI" secondary="true" icon="AllIcons.Toolwindows.WebToolWindow" anchor="right"
-                factoryClass="org.intellij.sdk.toolWindow.CalendarToolWindowFactory"/>
+                factoryClass="org.intellij.sdk.toolWindow.GenAIToolWindowFactory"/>
   </extensions>
 
 </idea-plugin>
